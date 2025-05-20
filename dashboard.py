@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 import plotly.graph_objects as go
 
-API_BASE_URL = "https://8eaa-35-189-181-155.ngrok-free.app"  # Replace this if ngrok URL changes
+API_BASE_URL = "https://e7a9-34-91-32-254.ngrok-free.app"   # Replace this if ngrok URL changes
 
 st.title("📈 Cryptocurrency Price Forecast Dashboard")
 
