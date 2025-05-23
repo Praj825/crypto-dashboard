@@ -1,11 +1,9 @@
 streamlit
-yfinance
 prophet
-statsmodels
+yfinance
+plotly
 pandas
 numpy
-matplotlib
+statsmodels
 scikit-learn
 tensorflow
-keras
-plotly
