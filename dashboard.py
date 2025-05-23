@@ -103,4 +103,4 @@ fig4.add_trace(go.Scatter(y=forecast_lstm.flatten(), name="Forecast"))
 fig4.update_layout(title="LSTM Forecast", xaxis_title="Index", yaxis_title="Price (USD)")
 st.plotly_chart(fig4)
 
-st.success("✅ All forecasts generated successfully!")
+
