@@ -15,14 +15,17 @@ st.set_page_config(page_title="Crypto Forecast Dashboard", layout="wide")
 st.title("📈 Cryptocurrency Forecast Dashboard")
 
 @st.cache_data
-
 def load_data():
-    df = yf.download("BTC-USD", start="2020-01-01")
-    df = df.reset_index()
-    df = df[['Date', 'Close']].rename(columns={"Date": "ds", "Close": "y"})
-    df['ds'] = pd.to_datetime(df['ds'], errors='coerce')
-    df['y'] = pd.to_numeric(df['y'], errors='coerce')
-    return df.dropna()
+    data = yf.download("BTC-USD", start="2020-01-01")
+    if "Close" not in data.columns:
+        st.error("❌ 'Close' column not found in data from yFinance.")
+        st.stop()
+    df = data.reset_index()[["Date", "Close"]].copy()
+    df.columns = ["ds", "y"]
+    df["ds"] = pd.to_datetime(df["ds"], errors="coerce")
+    df["y"] = pd.to_numeric(df["y"], errors="coerce")
+    df = df.dropna(subset=["ds", "y"])
+    return df
 
 # Load data
 df = load_data()
