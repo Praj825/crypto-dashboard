@@ -7,16 +7,22 @@ from prophet import Prophet
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 
 st.set_page_config(page_title="Crypto Forecast Dashboard", layout="wide")
-
 st.title("📈 Cryptocurrency Forecast Dashboard")
 
+# Sidebar Controls
+st.sidebar.header("Controls")
+selected_coin = st.sidebar.selectbox("Select Cryptocurrency", ["BTC-USD", "ETH-USD", "ADA-USD"])
+forecast_days = st.sidebar.slider("Forecast Horizon (days)", min_value=7, max_value=90, value=30)
+
 @st.cache_data
-def load_data():
-    data = yf.download("BTC-USD", start="2020-01-01")
+
+def load_data(symbol):
+    data = yf.download(symbol, start="2020-01-01")
     if "Close" not in data.columns:
         st.error("❌ 'Close' column not found in data from yFinance.")
         st.stop()
@@ -27,49 +33,73 @@ def load_data():
     df = df.dropna(subset=["ds", "y"])
     return df
 
+def print_metrics(actual, predicted):
+    mse = mean_squared_error(actual, predicted)
+    mae = mean_absolute_error(actual, predicted)
+    rmse = np.sqrt(mse)
+    st.write(f"**MAE:** {mae:.2f} | **MSE:** {mse:.2f} | **RMSE:** {rmse:.2f}")
+
 # Load data
-df = load_data()
-st.subheader("Latest BTC-USD Data")
+df = load_data(selected_coin)
+st.subheader(f"Latest {selected_coin} Data")
 st.dataframe(df.tail())
+
+# Candlestick Chart
+st.subheader("Candlestick Chart")
+candles = yf.download(selected_coin, period="3mo", interval="1d")
+fig_candle = go.Figure(data=[go.Candlestick(
+    x=candles.index,
+    open=candles['Open'],
+    high=candles['High'],
+    low=candles['Low'],
+    close=candles['Close'])])
+fig_candle.update_layout(xaxis_rangeslider_visible=False)
+st.plotly_chart(fig_candle)
 
 # Prophet Forecast
 if st.button("Run Prophet Forecast"):
     model_prophet = Prophet(daily_seasonality=True)
     model_prophet.fit(df)
-    future = model_prophet.make_future_dataframe(periods=30)
+    future = model_prophet.make_future_dataframe(periods=forecast_days)
     forecast = model_prophet.predict(future)
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df['ds'], y=df['y'], name='Actual'))
     fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], name='Forecast'))
-    fig.update_layout(title="Prophet 30-day Forecast", xaxis_title="Date", yaxis_title="Price")
+    fig.update_layout(title="Prophet Forecast", xaxis_title="Date", yaxis_title="Price")
     st.plotly_chart(fig)
+
+    print_metrics(df['y'][-forecast_days:], forecast['yhat'][-forecast_days:])
 
 # ARIMA Forecast
 if st.button("Run ARIMA Forecast"):
     model_arima = ARIMA(df['y'], order=(5, 1, 0))
     fit_arima = model_arima.fit()
-    forecast_arima = fit_arima.forecast(steps=30)
+    forecast_arima = fit_arima.forecast(steps=forecast_days)
 
     fig2 = go.Figure()
     fig2.add_trace(go.Scatter(y=df['y'], name='Actual'))
     fig2.add_trace(go.Scatter(y=forecast_arima, name='Forecast'))
-    fig2.update_layout(title="ARIMA 30-day Forecast", xaxis_title="Index", yaxis_title="Price")
+    fig2.update_layout(title="ARIMA Forecast", xaxis_title="Index", yaxis_title="Price")
     st.plotly_chart(fig2)
+
+    print_metrics(df['y'][-forecast_days:], forecast_arima)
 
 # SARIMA Forecast
 if st.button("Run SARIMA Forecast"):
     model_sarima = SARIMAX(df['y'], order=(1, 1, 1), seasonal_order=(1, 1, 1, 12))
     fit_sarima = model_sarima.fit(disp=False)
-    forecast_sarima = fit_sarima.forecast(steps=30)
+    forecast_sarima = fit_sarima.forecast(steps=forecast_days)
 
     fig3 = go.Figure()
     fig3.add_trace(go.Scatter(y=df['y'], name='Actual'))
     fig3.add_trace(go.Scatter(y=forecast_sarima, name='Forecast'))
-    fig3.update_layout(title="SARIMA 30-day Forecast", xaxis_title="Index", yaxis_title="Price")
+    fig3.update_layout(title="SARIMA Forecast", xaxis_title="Index", yaxis_title="Price")
     st.plotly_chart(fig3)
 
-# LSTM Forecast (lightweight)
+    print_metrics(df['y'][-forecast_days:], forecast_sarima)
+
+# LSTM Forecast
 if st.button("Run LSTM Forecast"):
     scaler = MinMaxScaler()
     scaled_data = scaler.fit_transform(df['y'].values.reshape(-1, 1))
@@ -90,7 +120,7 @@ if st.button("Run LSTM Forecast"):
 
     inputs = scaled_data[-60:]
     lstm_predictions = []
-    for _ in range(30):
+    for _ in range(forecast_days):
         pred = model.predict(inputs.reshape(1, 60, 1), verbose=0)[0][0]
         lstm_predictions.append(pred)
         inputs = np.append(inputs[1:], pred).reshape(60, 1)
@@ -100,5 +130,7 @@ if st.button("Run LSTM Forecast"):
     fig4 = go.Figure()
     fig4.add_trace(go.Scatter(y=df['y'], name='Actual'))
     fig4.add_trace(go.Scatter(y=forecast_lstm.flatten(), name='Forecast'))
-    fig4.update_layout(title="LSTM 30-day Forecast", xaxis_title="Index", yaxis_title="Price")
+    fig4.update_layout(title="LSTM Forecast", xaxis_title="Index", yaxis_title="Price")
     st.plotly_chart(fig4)
+
+    print_metrics(df['y'][-forecast_days:], forecast_lstm.flatten())
