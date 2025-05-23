@@ -1,4 +1,10 @@
 streamlit
-requests
+yfinance
+prophet
+statsmodels
 pandas
-plotly
+numpy
+matplotlib
+scikit-learn
+tensorflow
+keras
