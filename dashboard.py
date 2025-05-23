@@ -1,58 +1,94 @@
 import streamlit as st
-import requests
+import yfinance as yf
 import pandas as pd
-import plotly.graph_objects as go
+import numpy as np
+import matplotlib.pyplot as plt
+from prophet import Prophet
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from sklearn.preprocessing import MinMaxScaler
+from keras.models import Sequential
+from keras.layers import LSTM, Dense
+from keras.optimizers import Adam
+import warnings
+warnings.filterwarnings("ignore")
 
-API_BASE_URL = "https://e7a9-34-91-32-254.ngrok-free.app"   # Replace this if ngrok URL changes
+st.set_page_config(layout="wide")
+st.title("📈 Cryptocurrency Forecast Dashboard (Prophet | ARIMA | SARIMA | LSTM)")
 
-st.title("📈 Cryptocurrency Price Forecast Dashboard")
+# Load data
+st.subheader("Loading BTC-USD data...")
+df = yf.download("BTC-USD", start="2021-01-01", end="2024-12-31")
+df = df[["Close"]].dropna()
+df = df.rename(columns={"Close": "y"})
+df["ds"] = df.index
+df.reset_index(drop=True, inplace=True)
 
-def get_latest_price():
-    try:
-        response = requests.get(f"{API_BASE_URL}/price")
-        return response.json().get("latest_price", None)
-    except:
-        return None
+# Prophet
+with st.spinner("Training Prophet model..."):
+    prophet_df = df[["ds", "y"]].copy()
+    prophet = Prophet(daily_seasonality=True)
+    prophet.fit(prophet_df)
+    future = prophet.make_future_dataframe(periods=30)
+    forecast_prophet = prophet.predict(future)
 
-def get_forecast():
-    try:
-        response = requests.get(f"{API_BASE_URL}/predict")
-        data = response.json()
-        return pd.DataFrame(data)
-    except:
-        return pd.DataFrame()
+# ARIMA
+with st.spinner("Training ARIMA model..."):
+    arima_model = ARIMA(df["y"], order=(5,1,0))
+    arima_fit = arima_model.fit()
+    forecast_arima = arima_fit.forecast(steps=30)
 
-def get_actual_vs_predicted():
-    try:
-        response = requests.get(f"{API_BASE_URL}/actual_vs_predicted")
-        data = response.json()
-        return pd.DataFrame(data)
-    except:
-        return pd.DataFrame()
+# SARIMA
+with st.spinner("Training SARIMA model..."):
+    sarima_model = SARIMAX(df["y"], order=(1,1,1), seasonal_order=(1,1,1,12))
+    sarima_fit = sarima_model.fit()
+    forecast_sarima = sarima_fit.forecast(steps=30)
 
-latest_price = get_latest_price()
-if latest_price:
-    st.metric("Latest BTC Price (USD)", f"${latest_price:,.2f}")
-else:
-    st.warning("Could not fetch latest price.")
+# LSTM
+with st.spinner("Training LSTM model..."):
+    sequence_length = 60
+    data = df[["y"]].values
+    scaler = MinMaxScaler()
+    scaled_data = scaler.fit_transform(data)
 
-forecast_df = get_forecast()
-if not forecast_df.empty:
-    forecast_df['ds'] = pd.to_datetime(forecast_df['ds'])
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=forecast_df['ds'], y=forecast_df['yhat'], mode='lines', name='Forecast'))
-    fig.update_layout(title='30-Day BTC Price Forecast', xaxis_title='Date', yaxis_title='Price (USD)')
-    st.plotly_chart(fig)
-else:
-    st.warning("Could not fetch forecast data.")
+    x_train, y_train = [], []
+    for i in range(sequence_length, len(scaled_data)):
+        x_train.append(scaled_data[i-sequence_length:i, 0])
+        y_train.append(scaled_data[i, 0])
+    x_train = np.array(x_train)
+    y_train = np.array(y_train)
+    x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
 
-actual_pred_df = get_actual_vs_predicted()
-if not actual_pred_df.empty:
-    actual_pred_df['ds'] = pd.to_datetime(actual_pred_df['ds'])
-    fig2 = go.Figure()
-    fig2.add_trace(go.Scatter(x=actual_pred_df['ds'], y=actual_pred_df['y'], mode='lines+markers', name='Actual'))
-    fig2.add_trace(go.Scatter(x=actual_pred_df['ds'], y=actual_pred_df['yhat'], mode='lines+markers', name='Predicted'))
-    fig2.update_layout(title='Actual vs Predicted BTC Prices', xaxis_title='Date', yaxis_title='Price (USD)')
-    st.plotly_chart(fig2)
-else:
-    st.warning("Could not fetch actual vs predicted data.")
+    model = Sequential()
+    model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], 1)))
+    model.add(LSTM(units=50))
+    model.add(Dense(1))
+    model.compile(loss='mean_squared_error', optimizer=Adam(learning_rate=0.001))
+    model.fit(x_train, y_train, epochs=10, batch_size=32, verbose=0)
+
+    test_input = scaled_data[-sequence_length:].reshape(1, sequence_length, 1)
+    lstm_predictions = []
+
+    for _ in range(30):
+        next_price = model.predict(test_input, verbose=0)[0][0]
+        lstm_predictions.append(next_price)
+        next_seq = np.append(test_input[0][1:], [[next_price]], axis=0)
+        test_input = next_seq.reshape(1, sequence_length, 1)
+
+    lstm_predictions = scaler.inverse_transform(np.array(lstm_predictions).reshape(-1, 1))
+    lstm_forecast_dates = df["ds"].iloc[-1] + pd.to_timedelta(np.arange(1, 31), unit='D')
+
+# Final Plot
+st.subheader("Forecast Comparison (Next 30 Days)")
+fig, ax = plt.subplots(figsize=(14,6))
+ax.plot(df["ds"], df["y"], label="Actual", color="black")
+ax.plot(forecast_prophet["ds"], forecast_prophet["yhat"], label="Prophet", linestyle="--")
+ax.plot(df["ds"].iloc[-1] + pd.to_timedelta(range(1,31), unit="D"), forecast_arima, label="ARIMA")
+ax.plot(df["ds"].iloc[-1] + pd.to_timedelta(range(1,31), unit="D"), forecast_sarima, label="SARIMA")
+ax.plot(lstm_forecast_dates, lstm_predictions, label="LSTM")
+ax.set_title("BTC Forecast: Prophet vs ARIMA vs SARIMA vs LSTM")
+ax.set_xlabel("Date")
+ax.set_ylabel("Price (USD)")
+ax.grid(True)
+ax.legend()
+st.pyplot(fig)
