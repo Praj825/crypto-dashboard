@@ -1,53 +1,38 @@
-# 📈 Cryptocurrency Price Forecast Dashboard
+# 📊 Cryptocurrency Forecast Dashboard
 
-This is an internship project that forecasts Bitcoin prices and visualizes them in an interactive dashboard using **Streamlit**.
+This project forecasts Bitcoin prices using four time series models:
+- Facebook Prophet
+- ARIMA
+- SARIMA
+- LSTM (deep learning)
 
----
-
-## 🚀 Live App Link
-
-🔗 [Click here to view the deployed dashboard](https://crypto-dashboard-4wqx5xfzmn9az8fnbwstir.streamlit.app)
-
----
-
-## 📊 Features
-
-- 📥 Downloads BTC-USD price data using `yfinance`
-- 🔮 Trains a **Prophet** model for time series forecasting
-- 📅 Predicts the next 30 days of prices
-- 📉 Shows forecast and actual-vs-predicted plots
-- 🌐 Hosted live using Streamlit Cloud
+An interactive dashboard is built with **Streamlit** to display predictions.
 
 ---
 
-## 🧰 Tech Stack
-
-| Tool       | Role                          |
-|------------|-------------------------------|
-| Python     | Programming language          |
-| yfinance   | Fetch historical price data   |
-| Prophet    | Forecasting model             |
-| FastAPI    | REST API for backend          |
-| Ngrok      | Public tunneling for FastAPI  |
-| Streamlit  | Frontend web dashboard        |
+## 🔧 Tech Stack
+- Python, Pandas, NumPy
+- YFinance API for data
+- Prophet, Statsmodels, TensorFlow, Keras
+- Streamlit, Plotly for visualization
 
 ---
 
-## 📁 Files in this Project
-
-| File             | Purpose                                  |
-|------------------|------------------------------------------|
-| `dashboard.py`   | Streamlit code to build the dashboard    |
-| `requirements.txt` | Lists required Python packages         |
-| `README.md`      | Describes the project and setup info     |
+## 📁 Project Structure
+- `dashboard.py` – Streamlit dashboard app
+- `TSA for crypto.ipynb` – Model development notebook (not needed for deployment)
+- `requirements.txt` – Dependencies for Streamlit Cloud
 
 ---
 
-## 📦 How to Run This Project Locally
+## 🚀 How to Run
 
-> *Only needed if you're cloning the repo — not for the deployed version.*
+### 🔹 On Streamlit Cloud
+1. Fork the repo
+2. Deploy on [Streamlit](https://share.streamlit.io)
+3. Set the app file as: `dashboard.py`
 
-### 1. Clone the repository
+### 🔹 Locally
 ```bash
-git clone https://github.com/Praj825/crypto-dashboard.git
-cd crypto-dashboard
+pip install -r requirements.txt
+streamlit run dashboard.py
