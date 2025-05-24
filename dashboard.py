@@ -10,9 +10,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
-import nltk
-nltk.download('vader_lexicon')
+from textblob import TextBlob
 
 st.set_page_config(page_title="Crypto Forecast Dashboard", layout="wide")
 st.title("📈 Cryptocurrency Forecast Dashboard")
@@ -137,8 +135,7 @@ example_texts = [
     "Huge whale movement spotted in BTC wallets."
 ]
 
-sia = SentimentIntensityAnalyzer()
-sentiments = [sia.polarity_scores(text)['compound'] for text in example_texts]
+sentiments = [TextBlob(text).sentiment.polarity for text in example_texts]
 
 sentiment_df = pd.DataFrame({
     'Text': example_texts,
