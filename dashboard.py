@@ -44,18 +44,6 @@ df = load_data(selected_coin)
 st.subheader(f"Latest {selected_coin} Data")
 st.dataframe(df.tail())
 
-# Candlestick Chart
-st.subheader("Candlestick Chart")
-candles = yf.download(selected_coin, period="3mo", interval="1d")
-fig_candle = go.Figure(data=[go.Candlestick(
-    x=candles.index,
-    open=candles['Open'],
-    high=candles['High'],
-    low=candles['Low'],
-    close=candles['Close'])])
-fig_candle.update_layout(xaxis_rangeslider_visible=False)
-st.plotly_chart(fig_candle)
-
 # Prophet Forecast
 if st.button("Run Prophet Forecast"):
     model_prophet = Prophet(daily_seasonality=True)
