@@ -10,6 +10,9 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import nltk
+nltk.download('vader_lexicon')
 
 st.set_page_config(page_title="Crypto Forecast Dashboard", layout="wide")
 st.title("📈 Cryptocurrency Forecast Dashboard")
@@ -122,3 +125,30 @@ if st.button("Run LSTM Forecast"):
     st.plotly_chart(fig4)
 
     print_metrics(df['y'][-forecast_days:], forecast_lstm.flatten())
+
+# Sentiment Analysis
+st.header("🧠 Market Sentiment Analysis")
+
+example_texts = [
+    "Bitcoin is booming again!",
+    "Crypto market crashes amid global tension.",
+    "Ethereum is showing strong technical patterns.",
+    "Investors are scared of regulations.",
+    "Huge whale movement spotted in BTC wallets."
+]
+
+sia = SentimentIntensityAnalyzer()
+sentiments = [sia.polarity_scores(text)['compound'] for text in example_texts]
+
+sentiment_df = pd.DataFrame({
+    'Text': example_texts,
+    'Sentiment Score': sentiments
+})
+
+st.subheader("📋 Sample Sentiment Scores")
+st.dataframe(sentiment_df)
+
+st.subheader("📈 Sentiment Score Bar Chart")
+fig_sent = go.Figure([go.Bar(x=sentiment_df['Text'], y=sentiment_df['Sentiment Score'])])
+fig_sent.update_layout(xaxis_title="Text", yaxis_title="Sentiment Score", title="Sample Sentiment Analysis")
+st.plotly_chart(fig_sent)
