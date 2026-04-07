@@ -21,24 +21,22 @@ selected_coin = st.sidebar.selectbox("Select Cryptocurrency", ["BTC-USD", "ETH-U
 forecast_days = st.sidebar.slider("Forecast Horizon (days)", min_value=7, max_value=90, value=30)
 
 @st.cache_data
-
 def load_data(symbol):
     data = yf.download(symbol, start="2020-01-01", auto_adjust=True)
-if data.empty:
-    st.error("❌ No data fetched. Check internet or try another coin.")
-    st.stop()
-# Fix for new yfinance MultiIndex columns
-if isinstance(data.columns, pd.MultiIndex):
-    data.columns = data.columns.get_level_values(0)
-if "Close" not in data.columns:
-    st.error("❌ 'Close' column not found in data from yFinance.")
-    st.stop()
+    if data.empty:
+        st.error("❌ No data fetched. Check internet or try another coin.")
+        st.stop()
+    if isinstance(data.columns, pd.MultiIndex):
+        data.columns = data.columns.get_level_values(0)
+    if "Close" not in data.columns:
+        st.error("❌ 'Close' column not found in data from yFinance.")
+        st.stop()
     df = data.reset_index()[["Date", "Close"]].copy()
     df.columns = ["ds", "y"]
     df["ds"] = pd.to_datetime(df["ds"], errors="coerce")
     df["y"] = pd.to_numeric(df["y"], errors="coerce")
     df = df.dropna(subset=["ds", "y"])
-     return df
+    return df
 
 def print_metrics(actual, predicted):
     mse = mean_squared_error(actual, predicted)
