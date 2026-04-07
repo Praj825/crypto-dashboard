@@ -38,7 +38,7 @@ if "Close" not in data.columns:
     df["ds"] = pd.to_datetime(df["ds"], errors="coerce")
     df["y"] = pd.to_numeric(df["y"], errors="coerce")
     df = df.dropna(subset=["ds", "y"])
-    return df
+     return df
 
 def print_metrics(actual, predicted):
     mse = mean_squared_error(actual, predicted)
