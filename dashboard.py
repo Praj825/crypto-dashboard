@@ -23,11 +23,17 @@ forecast_days = st.sidebar.slider("Forecast Horizon (days)", min_value=7, max_va
 @st.cache_data
 
 def load_data(symbol):
-    data = yf.download(symbol, start="2020-01-01")
-    if "Close" not in data.columns:
-        st.error("❌ 'Close' column not found in data from yFinance.")
-        st.stop()
-    df = data.reset_index()[["Date", "Close"]].copy()
+    data = yf.download(symbol, start="2020-01-01", auto_adjust=True)
+if data.empty:
+    st.error("❌ No data fetched. Check internet or try another coin.")
+    st.stop()
+# Fix for new yfinance MultiIndex columns
+if isinstance(data.columns, pd.MultiIndex):
+    data.columns = data.columns.get_level_values(0)
+if "Close" not in data.columns:
+    st.error("❌ 'Close' column not found in data from yFinance.")
+    st.stop()
+df = data.reset_index()[["Date", "Close"]].copy()
     df.columns = ["ds", "y"]
     df["ds"] = pd.to_datetime(df["ds"], errors="coerce")
     df["y"] = pd.to_numeric(df["y"], errors="coerce")
