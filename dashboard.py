@@ -33,7 +33,7 @@ if isinstance(data.columns, pd.MultiIndex):
 if "Close" not in data.columns:
     st.error("❌ 'Close' column not found in data from yFinance.")
     st.stop()
-df = data.reset_index()[["Date", "Close"]].copy()
+    df = data.reset_index()[["Date", "Close"]].copy()
     df.columns = ["ds", "y"]
     df["ds"] = pd.to_datetime(df["ds"], errors="coerce")
     df["y"] = pd.to_numeric(df["y"], errors="coerce")
